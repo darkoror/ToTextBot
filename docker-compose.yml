@@ -1,0 +1,13 @@
+version: "3.9"
+
+services:
+
+  bot:
+    build: .
+    image: to_text_bot_image
+    hostname: bot
+    command: bash -c "python ./bot.py"
+    volumes:
+      - .:/usr/src/app/
+    env_file:
+      - ./.env

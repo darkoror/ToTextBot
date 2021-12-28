@@ -47,7 +47,7 @@ def voice_2_ukr(filename):
     with sr.AudioFile(filename) as source:
         audio = r.listen(source)
         try:
-            text = r.recognize_google_cloud(audio_data=audio, credentials_json=settings.CREDENTIALS, language="uk-UA")
+            text = r.recognize_google_cloud(audio_data=audio, credentials_json="settings.CREDENTIALS", language="uk-UA")
         except BaseException as e:
             print(e)
             text = 'На жаль, мені не вдалося розпізнати те, що Ви сказали :('
