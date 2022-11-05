@@ -1,5 +1,4 @@
-import telebot
-import os
+import io
 
 import constants
 import voice_recognizer
@@ -7,7 +6,9 @@ import image_recognizer
 import settings
 import converter
 import keyboards
-import tools
+import utils
+
+import telebot
 
 
 bot = telebot.TeleBot(settings.TOKEN)
@@ -37,7 +38,7 @@ def photo_msg(message):
     :return:
     """
 
-    bot.reply_to(message, 'Вкажіть мову тексту на картинці', reply_markup=keyboards.image_keyboard())
+    bot.reply_to(message, constants.SELECT_IMAGE_TEXT_LANGUAGE, reply_markup=keyboards.image_keyboard())
 
 
 @bot.message_handler(content_types=['voice'])
@@ -48,7 +49,7 @@ def voice_msg(message):
     :return:
     """
 
-    bot.reply_to(message, 'Вкажіть мову голосового повідомлення', reply_markup=keyboards.voice_keyboard())
+    bot.reply_to(message, constants.SELECT_VOICE_LANGUAGE, reply_markup=keyboards.voice_keyboard())
 
 
 @bot.callback_query_handler(func=lambda call: 'image' in call.data)
@@ -63,12 +64,9 @@ def image_keyboard(call):
     answer = []
     for photo in call.message.reply_to_message.photo:
         tg_photo_msg = bot.get_file(photo.file_id)
-        downloaded_photo = bot.download_file(tg_photo_msg.file_path)
-        jpg_file = photo.file_id + '.jpg'
-        open(jpg_file, 'wb').write(downloaded_photo)
-        text_from_photo = image_recognizer.photo_2_text(jpg_file, image_lang)
-        answer.append(tools.normal_look(text_from_photo))
-        os.remove(jpg_file)
+        downloaded_photo = io.BytesIO(bot.download_file(tg_photo_msg.file_path))
+        text_from_photo = image_recognizer.photo_2_text(downloaded_photo, image_lang)
+        answer.append(utils.normalize_text(text_from_photo))
 
     recognized_text = ''
     if len(answer) > 1:
@@ -100,30 +98,33 @@ def voice_keyboard(call):
     voice_lang = call.data.split('.')[0]
 
     tg_voice_msg = bot.get_file(call.message.reply_to_message.voice.file_id)
-    downloaded_voice = bot.download_file(tg_voice_msg.file_path)  # downloading file (voice) from telegram
-    oga_file = call.message.json['reply_to_message']['voice']['file_unique_id'] + '.oga'
-    open(oga_file, 'wb').write(downloaded_voice)  # write down voice into file (.oga)
+    voice_oga = io.BytesIO(bot.download_file(tg_voice_msg.file_path))  # downloading file (voice) from telegram
 
-    wav_file = converter.oga_2_wav(oga_file)  # convert .oga to .wav
+    try:
+        wav_file = converter.oga_2_wav_bytesio(voice_oga)  # convert .oga to .wav
+    except converter.ConvertingError:
+        bot.answer_callback_query(
+            callback_query_id=call.id,
+            cache_time=7,
+            text=constants.SOMETHING_WENT_WRONG,
+        )
+        return
 
     if voice_lang == 'en':
         text_from_voice = voice_recognizer.voice_2_en(wav_file)
-        os.remove(oga_file)
-        os.remove(wav_file)
         bot.reply_to(call.message.reply_to_message, text_from_voice)
 
-    elif voice_lang == 'ukr':
-        # text_from_voice = voice_recognizer.voice_2_ukr(wav_file)
-        os.remove(oga_file)
-        os.remove(wav_file)
-        bot.answer_callback_query(callback_query_id=call.id, cache_time=7,
-                                  text='Українська мова тимчасово недоступна :(\nВибачте за незручності.')
+    elif voice_lang == 'ua':
+        # text_from_voice = voice_recognizer.voice_2_ua(wav_file)
+        bot.answer_callback_query(
+            callback_query_id=call.id,
+            cache_time=7,
+            text=constants.UKRAINIAN_IS_UNAVAILABLE
+        )
         # bot.reply_to(call.message.reply_to_message, text_from_voice)
 
     elif voice_lang == 'ru':
         text_from_voice = voice_recognizer.voice_2_ru(wav_file)
-        os.remove(oga_file)
-        os.remove(wav_file)
         bot.reply_to(call.message.reply_to_message, text_from_voice)
 
 

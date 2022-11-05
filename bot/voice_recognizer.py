@@ -1,5 +1,7 @@
-import speech_recognition as sr
+from bot import constants
 import settings
+
+import speech_recognition as sr
 
 
 def voice_2_en(filename):
@@ -14,8 +16,8 @@ def voice_2_en(filename):
         audio = r.listen(source)
         try:
             text = r.recognize_google(audio)
-        except:
-            text = 'На жаль, мені не вдалося розпізнати те, що Ви сказали :('
+        except BaseException:
+            text = constants.VOICE_TEXT_UNRECOGNIZED
     return text
 
 
@@ -30,13 +32,13 @@ def voice_2_ru(filename):
     with sr.AudioFile(filename) as source:
         audio = r.listen(source)
         try:
-            text = r.recognize_wit(audio_data=audio, key='BTSXQDFI5VXYM575B7UKNT65DLETMFW6')
-        except:
-            text = 'На жаль, мені не вдалося розпізнати те, що Ви сказали :('
+            text = r.recognize_wit(audio_data=audio, key=settings.RU_SERVER_ACCESS_TOKEN)
+        except BaseException:
+            text = constants.VOICE_TEXT_UNRECOGNIZED
     return text
 
 
-def voice_2_ukr(filename):
+def voice_2_ua(filename):
     """
     recognize ukrainian speech from voice msg
     :param filename: filename .wav
@@ -50,5 +52,5 @@ def voice_2_ukr(filename):
             text = r.recognize_google_cloud(audio_data=audio, credentials_json="settings.CREDENTIALS", language="uk-UA")
         except BaseException as e:
             print(e)
-            text = 'На жаль, мені не вдалося розпізнати те, що Ви сказали :('
+            text = constants.VOICE_TEXT_UNRECOGNIZED
     return text

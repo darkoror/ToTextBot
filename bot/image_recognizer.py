@@ -1,31 +1,24 @@
-"""
-sudo apt-get update
-sudo apt-get install tesseract-ocr
-sudo apt-get install libtesseract-dev
-sudo apt-get install tesseract-ocr-[ukr]
-sudo apt-get install tesseract-ocr-[rus]
-"""
+from io import BytesIO
+
+from bot import constants
+
 import cv2
+import numpy as np
 import pytesseract
 
 
-def photo_2_text(path_to_image, language):  # some oe sting comment
+def photo_2_text(image: BytesIO, language):
     """
     recognize text from image
     :param language: short name of language
-    :param path_to_image: filename .jpg
+    :param image: object BytesIO
     :return: recognized text
     """
 
-    img = cv2.imread(path_to_image)
+    file_bytes = np.asarray(bytearray(image.read()), dtype=np.uint8)
+    img = cv2.imdecode(file_bytes, cv2.IMREAD_COLOR)
     text = pytesseract.image_to_string(img, lang=language)
     if text == '':
-        return 'На жаль, мені не вдалося розпізнати текст на фото :('
-    return text
+        return constants.IMAGE_TEXT_UNRECOGNIZED
 
-# https://translate.yandex.com/ocr
-"""
-img = cv2.imread('/home/darkor/Pictures/Screenshot from 2020-02-02 14-05-17.png')
-text = pytesseract.image_to_string(image=img, lang='ua')
-print(text)
-"""
+    return text
